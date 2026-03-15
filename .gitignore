@@ -41,6 +41,8 @@ ENV/
 data/*.txt
 data/*.csv
 data/*.arff
+data/**/*.parquet
+*.parquet
 *.zip
 *.tar.gz
 

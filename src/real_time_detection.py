@@ -173,16 +173,69 @@ class RealTimeIDS:
         else:
             print("\n⚠ Latency exceeds 50ms threshold")
 
-def simulate_traffic(num_samples=100):
-    """Simulate network traffic for testing"""
+def simulate_traffic(num_samples=100, num_features=14):
+    """
+    Simulate network traffic with realistic patterns per attack type.
+    Features order matches COMMON_FEATURES:
+      duration, src_bytes, dst_bytes, count,
+      serror_rate, rerror_rate, same_srv_rate, diff_srv_rate,
+      dst_host_count, dst_host_srv_count, dst_host_same_srv_rate,
+      dst_host_diff_srv_rate, dst_host_serror_rate, dst_host_rerror_rate
+    """
     print(f"\nSimulating {num_samples} network traffic samples...")
-    
-    # Generate random traffic (41 features for NSL-KDD)
+
+    def make_normal():
+        return [0.1, 500, 300, 5, 0.0, 0.0, 0.9, 0.05, 10, 8, 0.9, 0.05, 0.0, 0.0]
+
+    def make_dos():
+        # High connection count, high serror_rate, large src_bytes
+        return [0.0, 50000 + np.random.randint(0, 50000), 0,
+                500 + np.random.randint(0, 500), 0.9 + np.random.rand()*0.1,
+                0.0, 1.0, 0.0, 255, 255, 1.0, 0.0,
+                0.9 + np.random.rand()*0.1, 0.0]
+
+    def make_probe():
+        # Many different services, zero bytes, very high diff_srv_rate, high count
+        return [0.0, 0, 0,
+                500 + np.random.randint(0, 255),
+                0.0, 0.0, 0.0, 1.0, 255, 1, 0.0, 1.0, 0.0, 0.0]
+
+    def make_r2l():
+        # Based on actual R2L mean values from training data
+        return [3994469 + np.random.randint(0, 100000),
+                18865 + np.random.randint(0, 5000),
+                4356 + np.random.randint(0, 1000),
+                6 + np.random.randint(0, 5),
+                454544 + np.random.randint(0, 10000),
+                198197 + np.random.randint(0, 10000),
+                50392 + np.random.randint(0, 5000),
+                316110 + np.random.randint(0, 10000),
+                37 + np.random.randint(0, 10),
+                156 + np.random.randint(0, 20),
+                204 + np.random.randint(0, 20),
+                258 + np.random.randint(0, 20),
+                0.18, 0.01]
+
+    def make_u2r():
+        # Very low count, specific byte patterns
+        return [100 + np.random.randint(0, 500),
+                2000 + np.random.randint(0, 3000),
+                1000 + np.random.randint(0, 2000),
+                1, 0.0, 0.0, 1.0, 0.0, 1, 1, 1.0, 0.0, 0.0, 0.0]
+
+    generators = [make_normal, make_dos, make_probe, make_r2l, make_u2r]
+    # Weighted to reflect real-world distribution
+    weights = [0.50, 0.25, 0.15, 0.07, 0.03]
+
     traffic_samples = []
     for _ in range(num_samples):
-        sample = np.random.rand(41)
+        gen = np.random.choice(generators, p=weights)
+        sample = np.array(gen(), dtype=np.float32)
+        # Add small noise
+        sample += np.random.normal(0, 0.01, size=len(sample))
+        sample = np.clip(sample, 0, None)
         traffic_samples.append(sample)
-    
+
     return traffic_samples
 
 if __name__ == "__main__":
