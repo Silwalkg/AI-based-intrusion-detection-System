@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AI Intrusion Detection System</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #0d1117;
+      color: #e6edf3;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      background: #161b22;
+      border-bottom: 1px solid #30363d;
+      padding: 16px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    header h1 {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: #58a6ff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    header h1 span.icon { font-size: 1.4rem; }
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #1a2a1a;
+      border: 1px solid #2ea043;
+      border-radius: 20px;
+      padding: 6px 14px;
+      font-size: 0.8rem;
+      color: #3fb950;
+      font-weight: 500;
+    }
+    .status-badge .dot {
+      width: 8px; height: 8px;
+      background: #3fb950;
+      border-radius: 50%;
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    /* ── Layout ── */
+    .container { padding: 24px 32px; }
+
+    /* ── Stat Cards ── */
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .card {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 10px;
+      padding: 20px;
+    }
+    .card .label {
+      font-size: 0.75rem;
+      color: #8b949e;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 8px;
+    }
+    .card .value {
+      font-size: 2rem;
+      font-weight: 700;
+      line-height: 1;
+    }
+    .card .sub {
+      font-size: 0.75rem;
+      color: #8b949e;
+      margin-top: 6px;
+    }
+    .card.blue  .value { color: #58a6ff; }
+    .card.red   .value { color: #f85149; }
+    .card.green .value { color: #3fb950; }
+    .card.yellow .value { color: #d29922; }
+
+    /* ── Main grid ── */
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .panel {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .panel-header {
+      padding: 14px 20px;
+      border-bottom: 1px solid #30363d;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #c9d1d9;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .panel-header .badge {
+      font-size: 0.7rem;
+      background: #21262d;
+      border: 1px solid #30363d;
+      border-radius: 12px;
+      padding: 2px 10px;
+      color: #8b949e;
+    }
+    .panel-body { padding: 20px; }
+
+    /* ── Timeline chart (fake SVG) ── */
+    .chart-area {
+      width: 100%;
+      height: 160px;
+      position: relative;
+    }
+    .chart-area svg { width: 100%; height: 100%; }
+
+    /* ── Attack breakdown ── */
+    .breakdown-list { list-style: none; }
+    .breakdown-list li {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 0;
+      border-bottom: 1px solid #21262d;
+      font-size: 0.85rem;
+    }
+    .breakdown-list li:last-child { border-bottom: none; }
+    .attack-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .breakdown-list .name { flex: 1; color: #c9d1d9; }
+    .breakdown-list .count { color: #8b949e; font-size: 0.8rem; }
+    .breakdown-list .pct {
+      font-weight: 600;
+      min-width: 40px;
+      text-align: right;
+    }
+    .bar-wrap {
+      width: 80px;
+      height: 6px;
+      background: #21262d;
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .bar-fill { height: 100%; border-radius: 3px; }
+
+    /* ── Live feed ── */
+    .feed-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+    .feed-table th {
+      text-align: left;
+      padding: 8px 12px;
+      color: #8b949e;
+      font-weight: 500;
+      border-bottom: 1px solid #30363d;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+    }
+    .feed-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid #21262d;
+      color: #c9d1d9;
+    }
+    .feed-table tr:last-child td { border-bottom: none; }
+    .feed-table tr:hover td { background: #1c2128; }
+
+    .tag {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 12px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    .tag.normal  { background: #1a2a1a; color: #3fb950; border: 1px solid #2ea043; }
+    .tag.dos     { background: #2d1a1a; color: #f85149; border: 1px solid #da3633; }
+    .tag.probe   { background: #2a1f0a; color: #d29922; border: 1px solid #9e6a03; }
+    .tag.r2l     { background: #1a1a2d; color: #79c0ff; border: 1px solid #388bfd; }
+    .tag.u2r     { background: #2a1a2d; color: #d2a8ff; border: 1px solid #8957e5; }
+
+    .conf-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .conf-bar .conf-track {
+      width: 60px; height: 5px;
+      background: #21262d;
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .conf-bar .conf-fill { height: 100%; border-radius: 3px; background: #58a6ff; }
+
+    /* ── Bottom row ── */
+    .bottom-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .model-info { display: flex; flex-direction: column; gap: 12px; }
+    .model-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.83rem;
+    }
+    .model-row .key { color: #8b949e; }
+    .model-row .val { color: #c9d1d9; font-weight: 500; }
+    .model-row .val.good { color: #3fb950; }
+
+    .latency-bars { display: flex; flex-direction: column; gap: 10px; }
+    .lat-row { font-size: 0.82rem; }
+    .lat-label {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 4px;
+      color: #8b949e;
+    }
+    .lat-label span:last-child { color: #c9d1d9; }
+    .lat-track {
+      height: 6px; background: #21262d;
+      border-radius: 3px; overflow: hidden;
+    }
+    .lat-fill { height: 100%; border-radius: 3px; }
+
+    /* ── Alert toasts ── */
+    #alert-container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 999;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-width: 340px;
+    }
+    .toast {
+      background: #161b22;
+      border-radius: 10px;
+      padding: 14px 16px;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+      animation: slideIn 0.3s ease;
+      border-left: 4px solid #f85149;
+    }
+    .toast.probe  { border-left-color: #d29922; }
+    .toast.r2l    { border-left-color: #79c0ff; }
+    .toast.u2r    { border-left-color: #d2a8ff; }
+    .toast.dos    { border-left-color: #f85149; }
+    @keyframes slideIn {
+      from { transform: translateX(120%); opacity: 0; }
+      to   { transform: translateX(0);    opacity: 1; }
+    }
+    @keyframes slideOut {
+      from { transform: translateX(0);    opacity: 1; }
+      to   { transform: translateX(120%); opacity: 0; }
+    }
+    .toast-icon { font-size: 1.4rem; line-height: 1; }
+    .toast-body { flex: 1; }
+    .toast-title {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #e6edf3;
+      margin-bottom: 3px;
+    }
+    .toast-msg { font-size: 0.78rem; color: #8b949e; }
+    .toast-close {
+      background: none;
+      border: none;
+      color: #8b949e;
+      cursor: pointer;
+      font-size: 1rem;
+      line-height: 1;
+      padding: 0;
+    }
+    .toast-close:hover { color: #e6edf3; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1><span class="icon">🛡️</span> AI-Powered Intrusion Detection System</h1>
+  <div class="status-badge"><div class="dot"></div> Monitoring Active</div>
+</header>
+
+<div class="container">
+
+  <!-- Stat Cards -->
+  <div class="cards">
+    <div class="card blue">
+      <div class="label">Total Packets Analyzed</div>
+      <div class="value">2,847</div>
+      <div class="sub">↑ 142 in last minute</div>
+    </div>
+    <div class="card red">
+      <div class="label">Attacks Detected</div>
+      <div class="value">483</div>
+      <div class="sub">16.97% attack rate</div>
+    </div>
+    <div class="card green">
+      <div class="label">Model Accuracy</div>
+      <div class="value">98.8%</div>
+      <div class="sub">Random Forest · XGBoost</div>
+    </div>
+    <div class="card yellow">
+      <div class="label">Avg Latency</div>
+      <div class="value">0.005ms</div>
+      <div class="sub">✓ Under 50ms threshold</div>
+    </div>
+  </div>
+
+  <!-- Timeline + Breakdown -->
+  <div class="main-grid">
+
+    <!-- Timeline -->
+    <div class="panel">
+      <div class="panel-header">
+        Live Detection Timeline
+        <span class="badge">Last 60 seconds</span>
+      </div>
+      <div class="panel-body">
+        <div class="chart-area">
+          <svg viewBox="0 0 600 140" preserveAspectRatio="none">
+            <!-- Grid lines -->
+            <line x1="0" y1="35"  x2="600" y2="35"  stroke="#21262d" stroke-width="1"/>
+            <line x1="0" y1="70"  x2="600" y2="70"  stroke="#21262d" stroke-width="1"/>
+            <line x1="0" y1="105" x2="600" y2="105" stroke="#21262d" stroke-width="1"/>
+            <!-- Normal traffic area -->
+            <polyline points="0,90 50,85 100,88 150,80 200,83 250,78 300,82 350,79 400,84 450,81 500,77 550,80 600,83"
+              fill="none" stroke="#3fb950" stroke-width="2" opacity="0.6"/>
+            <!-- Attack spikes -->
+            <polyline points="0,110 50,108 100,40 150,105 200,30 250,100 300,45 350,108 400,35 450,102 500,50 550,107 600,110"
+              fill="none" stroke="#f85149" stroke-width="2"/>
+            <!-- Fill under attack line -->
+            <polygon points="0,140 0,110 50,108 100,40 150,105 200,30 250,100 300,45 350,108 400,35 450,102 500,50 550,107 600,110 600,140"
+              fill="#f85149" opacity="0.08"/>
+            <!-- Labels -->
+            <text x="8" y="132" fill="#8b949e" font-size="9">0s</text>
+            <text x="285" y="132" fill="#8b949e" font-size="9">30s</text>
+            <text x="575" y="132" fill="#8b949e" font-size="9">60s</text>
+            <text x="8" y="33" fill="#8b949e" font-size="9">High</text>
+            <text x="8" y="108" fill="#8b949e" font-size="9">Low</text>
+          </svg>
+        </div>
+        <div style="display:flex;gap:20px;margin-top:12px;font-size:0.75rem;">
+          <span style="display:flex;align-items:center;gap:6px;color:#8b949e;">
+            <span style="width:12px;height:3px;background:#f85149;display:inline-block;border-radius:2px;"></span> Attacks
+          </span>
+          <span style="display:flex;align-items:center;gap:6px;color:#8b949e;">
+            <span style="width:12px;height:3px;background:#3fb950;display:inline-block;border-radius:2px;"></span> Normal
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Attack Breakdown -->
+    <div class="panel">
+      <div class="panel-header">Attack Breakdown</div>
+      <div class="panel-body">
+        <ul class="breakdown-list">
+          <li>
+            <span class="attack-dot" style="background:#3fb950"></span>
+            <span class="name">Normal</span>
+            <div class="bar-wrap"><div class="bar-fill" style="width:79%;background:#3fb950"></div></div>
+            <span class="count">2,364</span>
+            <span class="pct" style="color:#3fb950">79%</span>
+          </li>
+          <li>
+            <span class="attack-dot" style="background:#f85149"></span>
+            <span class="name">DoS</span>
+            <div class="bar-wrap"><div class="bar-fill" style="width:55%;background:#f85149"></div></div>
+            <span class="count">275</span>
+            <span class="pct" style="color:#f85149">9.7%</span>
+          </li>
+          <li>
+            <span class="attack-dot" style="background:#d29922"></span>
+            <span class="name">Probe</span>
+            <div class="bar-wrap"><div class="bar-fill" style="width:30%;background:#d29922"></div></div>
+            <span class="count">142</span>
+            <span class="pct" style="color:#d29922">5.0%</span>
+          </li>
+          <li>
+            <span class="attack-dot" style="background:#79c0ff"></span>
+            <span class="name">R2L</span>
+            <div class="bar-wrap"><div class="bar-fill" style="width:15%;background:#79c0ff"></div></div>
+            <span class="count">51</span>
+            <span class="pct" style="color:#79c0ff">1.8%</span>
+          </li>
+          <li>
+            <span class="attack-dot" style="background:#d2a8ff"></span>
+            <span class="name">U2R</span>
+            <div class="bar-wrap"><div class="bar-fill" style="width:5%;background:#d2a8ff"></div></div>
+            <span class="count">15</span>
+            <span class="pct" style="color:#d2a8ff">0.5%</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Live Feed -->
+  <div class="panel" style="margin-bottom:24px;">
+    <div class="panel-header">
+      Live Detection Feed
+      <span class="badge">100 most recent</span>
+    </div>
+    <div class="panel-body" style="padding:0;">
+      <table class="feed-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Timestamp</th>
+            <th>Attack Type</th>
+            <th>Confidence</th>
+            <th>Latency</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="color:#8b949e">2847</td>
+            <td style="color:#8b949e">15:42:31.204</td>
+            <td><span class="tag dos">DoS</span></td>
+            <td><div class="conf-bar"><div class="conf-track"><div class="conf-fill" style="width:68%"></div></div><span style="font-size:0.75rem;color:#8b949e">0.68</span></div></td>
+            <td style="color:#8b949e">0.005ms</td>
+            <td style="color:#f85149">⚠ Attack</td>
+          </tr>
+          <tr>
+            <td style="color:#8b949e">2846</td>
+            <td style="color:#8b949e">15:42:31.198</td>
+            <td><span class="tag normal">Normal</span></td>
+            <td><div class="conf-bar"><div class="conf-track"><div class="conf-fill" style="width:95%"></div></div><span style="font-size:0.75rem;color:#8b949e">0.95</span></div></td>
+            <td style="color:#8b949e">0.004ms</td>
+            <td style="color:#3fb950">✓ Safe</td>
+          </tr>
+          <tr>
+            <td style="color:#8b949e">2845</td>
+            <td style="color:#8b949e">15:42:31.190</td>
+            <td><span class="tag probe">Probe</span></td>
+            <td><div class="conf-bar"><div class="conf-track"><div class="conf-fill" style="width:76%"></div></div><span style="font-size:0.75rem;color:#8b949e">0.76</span></div></td>
+            <td style="color:#8b949e">0.005ms</td>
+            <td style="color:#f85149">⚠ Attack</td>
+          </tr>
+          <tr>
+            <td style="color:#8b949e">2844</td>
+            <td style="color:#8b949e">15:42:31.183</td>
+            <td><span class="tag normal">Normal</span></td>
+            <td><div class="conf-bar"><div class="conf-track"><div class="conf-fill" style="width:91%"></div></div><span style="font-size:0.75rem;color:#8b949e">0.91</span></div></td>
+            <td style="color:#8b949e">0.004ms</td>
+            <td style="color:#3fb950">✓ Safe</td>
+          </tr>
+          <tr>
+            <td style="color:#8b949e">2843</td>
+            <td style="color:#8b949e">15:42:31.175</td>
+            <td><span class="tag u2r">U2R</span></td>
+            <td><div class="conf-bar"><div class="conf-track"><div class="conf-fill" style="width:52%"></div></div><span style="font-size:0.75rem;color:#8b949e">0.52</span></div></td>
+            <td style="color:#8b949e">0.006ms</td>
+            <td style="color:#f85149">⚠ Attack</td>
+          </tr>
+          <tr>
+            <td style="color:#8b949e">2842</td>
+            <td style="color:#8b949e">15:42:31.168</td>
+            <td><span class="tag r2l">R2L</span></td>
+            <td><div class="conf-bar"><div class="conf-track"><div class="conf-fill" style="width:61%"></div></div><span style="font-size:0.75rem;color:#8b949e">0.61</span></div></td>
+            <td style="color:#8b949e">0.005ms</td>
+            <td style="color:#f85149">⚠ Attack</td>
+          </tr>
+          <tr>
+            <td style="color:#8b949e">2841</td>
+            <td style="color:#8b949e">15:42:31.160</td>
+            <td><span class="tag normal">Normal</span></td>
+            <td><div class="conf-bar"><div class="conf-track"><div class="conf-fill" style="width:88%"></div></div><span style="font-size:0.75rem;color:#8b949e">0.88</span></div></td>
+            <td style="color:#8b949e">0.004ms</td>
+            <td style="color:#3fb950">✓ Safe</td>
+          </tr>
+          <tr>
+            <td style="color:#8b949e">2840</td>
+            <td style="color:#8b949e">15:42:31.152</td>
+            <td><span class="tag dos">DoS</span></td>
+            <td><div class="conf-bar"><div class="conf-track"><div class="conf-fill" style="width:71%"></div></div><span style="font-size:0.75rem;color:#8b949e">0.71</span></div></td>
+            <td style="color:#8b949e">0.005ms</td>
+            <td style="color:#f85149">⚠ Attack</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Bottom row -->
+  <div class="bottom-grid">
+
+    <!-- Model Info -->
+    <div class="panel">
+      <div class="panel-header">Model Information</div>
+      <div class="panel-body">
+        <div class="model-info">
+          <div class="model-row"><span class="key">Active Model</span><span class="val">Random Forest</span></div>
+          <div class="model-row"><span class="key">Accuracy</span><span class="val good">98.80%</span></div>
+          <div class="model-row"><span class="key">F1-Score</span><span class="val good">98.78%</span></div>
+          <div class="model-row"><span class="key">Training Dataset</span><span class="val">NSL-KDD + CIC-IDS2017</span></div>
+          <div class="model-row"><span class="key">Training Samples</span><span class="val">2,380,955</span></div>
+          <div class="model-row"><span class="key">Attack Classes</span><span class="val">5 (Normal, DoS, Probe, R2L, U2R)</span></div>
+          <div class="model-row"><span class="key">Features Used</span><span class="val">14 network flow features</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Latency per model -->
+    <div class="panel">
+      <div class="panel-header">Model Latency Comparison</div>
+      <div class="panel-body">
+        <div class="latency-bars">
+          <div class="lat-row">
+            <div class="lat-label"><span>Random Forest</span><span>0.005 ms</span></div>
+            <div class="lat-track"><div class="lat-fill" style="width:5%;background:#3fb950"></div></div>
+          </div>
+          <div class="lat-row">
+            <div class="lat-label"><span>XGBoost</span><span>0.004 ms</span></div>
+            <div class="lat-track"><div class="lat-fill" style="width:4%;background:#58a6ff"></div></div>
+          </div>
+          <div class="lat-row">
+            <div class="lat-label"><span>Neural Network</span><span>0.028 ms</span></div>
+            <div class="lat-track"><div class="lat-fill" style="width:28%;background:#d29922"></div></div>
+          </div>
+          <div class="lat-row">
+            <div class="lat-label"><span>SVM</span><span>0.267 ms</span></div>
+            <div class="lat-track"><div class="lat-fill" style="width:100%;background:#f85149"></div></div>
+          </div>
+          <div style="margin-top:12px;padding-top:12px;border-top:1px solid #21262d;font-size:0.75rem;color:#8b949e;">
+            All models well under the 50ms real-time threshold
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Alert container -->
+<div id="alert-container"></div>
+
+<script>
+  const attacks = [
+    { type: 'dos',   icon: '🔴', label: 'DoS Attack',   msg: 'High-volume denial of service traffic detected' },
+    { type: 'probe', icon: '🟡', label: 'Probe Attack',  msg: 'Port scanning / reconnaissance activity detected' },
+    { type: 'r2l',   icon: '🔵', label: 'R2L Attack',    msg: 'Remote-to-local intrusion attempt detected' },
+    { type: 'u2r',   icon: '🟣', label: 'U2R Attack',    msg: 'Privilege escalation attempt detected' },
+  ];
+
+  function showAlert(attack) {
+    const container = document.getElementById('alert-container');
+    const toast = document.createElement('div');
+    toast.className = `toast ${attack.type}`;
+    toast.innerHTML = `
+      <div class="toast-icon">${attack.icon}</div>
+      <div class="toast-body">
+        <div class="toast-title">⚠ ${attack.label} Detected</div>
+        <div class="toast-msg">${attack.msg} · Confidence: ${(0.5 + Math.random() * 0.45).toFixed(2)}</div>
+      </div>
+      <button class="toast-close" onclick="this.parentElement.remove()">✕</button>
+    `;
+    container.prepend(toast);
+    // Auto-dismiss after 4 seconds
+    setTimeout(() => {
+      toast.style.animation = 'slideOut 0.3s ease forwards';
+      setTimeout(() => toast.remove(), 300);
+    }, 4000);
+  }
+
+  // Demo: fire alerts every few seconds to show how it looks
+  const sequence = [
+    { delay: 1000,  attack: attacks[0] },
+    { delay: 3500,  attack: attacks[1] },
+    { delay: 6000,  attack: attacks[3] },
+    { delay: 9000,  attack: attacks[0] },
+    { delay: 12000, attack: attacks[2] },
+    { delay: 15000, attack: attacks[1] },
+  ];
+  sequence.forEach(({ delay, attack }) => setTimeout(() => showAlert(attack), delay));
+</script>
+
+</body>
+</html>
