@@ -174,5 +174,5 @@ Final Year Project — Computer Security
 ---
 
 👩‍💻 Author
-Akanksha Mane
-Cybersecurity Advanced Project | BE IT
+Silwalkg
+Cybersecurity Advanced Project | IT
