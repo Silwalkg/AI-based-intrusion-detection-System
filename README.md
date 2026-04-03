@@ -156,4 +156,17 @@ Python, scikit-learn, XGBoost, TensorFlow/Keras, Scapy, Flask, Chart.js, pandas,
 
 ---
 
+## Future Work
+
+- AI-powered attack explanation — integrate an LLM (Groq/LLaMA) to generate SOC-style human-readable explanations when an attack is detected, including severity assessment and mitigation steps
+- Controlled attack lab — integrate CICFlowMeter for real live attack detection using the exact same feature format the model was trained on
+- SMOTE oversampling to fix class imbalance for R2L and U2R categories
+- Add more datasets (UNSW-NB15, CIC-IDS2018) for broader attack coverage
+- Store detections in a database for historical analysis
+- Email/SMS alerting for critical detections
+- Deploy on a dedicated network sensor or Raspberry Pi
+- Ensemble voting across all 4 models for higher confidence predictions
+
+---
+
 Final Year Project — Computer Security
