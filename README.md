@@ -173,4 +173,6 @@ Final Year Project — Computer Security
 
 ---
 
-**Author:** Silvalkg
+👩‍💻 Author
+Akanksha Mane
+Cybersecurity Advanced Project | BE IT
