@@ -1,0 +1,63 @@
+[2026-02-14 15:52:08] Starting IDS training pipeline
+[2026-02-14 15:52:26] Training Random Forest
+[2026-02-14 15:52:45] Training XGBoost
+[2026-02-14 15:52:55] Starting IDS training pipeline
+[2026-02-14 15:53:08] Training Random Forest
+[2026-02-14 15:53:25] Training XGBoost
+[2026-02-14 15:53:40] Training SVM
+[2026-02-14 15:53:42] Training Neural Network
+[2026-02-14 15:54:04] Training SVM
+[2026-02-14 15:54:05] Training Neural Network
+[2026-02-14 15:55:26] Evaluating Random Forest
+[2026-02-14 15:55:29] Evaluating XGBoost
+[2026-02-14 15:55:31] Evaluating SVM
+[2026-02-14 15:55:38] Evaluating Neural Network
+[2026-02-14 15:55:44] Evaluating Random Forest
+[2026-02-14 15:55:45] Evaluating XGBoost
+[2026-02-14 15:55:47] Evaluating SVM
+[2026-02-14 15:55:50] Evaluating Neural Network
+[2026-02-14 15:56:28] Starting IDS training pipeline
+[2026-02-14 15:56:39] Training Random Forest
+[2026-02-14 15:56:55] Training XGBoost
+[2026-02-14 15:57:18] Training SVM
+[2026-02-14 15:57:19] Training Neural Network
+[2026-02-14 15:58:39] Evaluating Random Forest
+[2026-02-14 15:58:40] Evaluating XGBoost
+[2026-02-14 15:58:41] Evaluating SVM
+[2026-02-14 15:58:44] Evaluating Neural Network
+[2026-02-14 15:58:48] Training pipeline completed successfully
+[2026-02-26 13:50:20] Starting IDS training pipeline (without TensorFlow)
+[2026-02-26 13:50:27] Training Random Forest
+[2026-02-26 13:50:37] Training XGBoost
+[2026-02-26 13:50:44] Training SVM
+[2026-02-26 13:50:56] Training pipeline completed successfully (without TensorFlow)
+[2026-02-26 14:48:06] Starting IDS training pipeline
+[2026-02-26 14:48:17] Training Random Forest
+[2026-02-26 14:48:26] Training XGBoost
+[2026-02-26 14:48:41] Training SVM
+[2026-02-26 14:48:42] Training Neural Network
+[2026-02-26 14:49:43] Evaluating Random Forest
+[2026-02-26 14:49:44] Evaluating XGBoost
+[2026-02-26 14:49:44] Evaluating SVM
+[2026-02-26 14:49:47] Evaluating Neural Network
+[2026-02-26 14:49:50] Training pipeline completed successfully
+[2026-02-26 14:50:39] Starting IDS training pipeline
+[2026-02-26 14:50:45] Training Random Forest
+[2026-02-26 14:50:54] Training XGBoost
+[2026-02-26 14:51:03] Training SVM
+[2026-02-26 14:51:04] Training Neural Network
+[2026-02-26 14:51:42] Evaluating Random Forest
+[2026-02-26 14:51:43] Evaluating XGBoost
+[2026-02-26 14:51:43] Evaluating SVM
+[2026-02-26 14:51:46] Evaluating Neural Network
+[2026-02-26 14:51:49] Training pipeline completed successfully
+[2026-03-14 15:16:50] Starting IDS training pipeline
+[2026-03-14 15:19:40] Training Random Forest
+[2026-03-14 15:24:57] Training XGBoost
+[2026-03-14 15:27:00] Training SVM
+[2026-03-14 15:27:02] Training Neural Network
+[2026-03-14 15:29:46] Evaluating Random Forest
+[2026-03-14 15:29:50] Evaluating XGBoost
+[2026-03-14 15:29:53] Evaluating SVM
+[2026-03-14 15:32:33] Evaluating Neural Network
+[2026-03-14 15:32:51] Training pipeline completed successfully
