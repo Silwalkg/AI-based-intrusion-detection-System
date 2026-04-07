@@ -78,6 +78,8 @@ The dashboard will immediately start showing live detections. Real network packe
 ├── requirements.txt
 ├── templates/
 │   └── index.html              # Live dashboard UI
+├── notebooks/
+│   └── IDS_Analysis.ipynb      # Jupyter notebook — EDA, model evaluation, charts
 ├── src/
 │   ├── data_preprocessing.py   # Load & combine datasets
 │   ├── model_training.py       # Train all 4 models
@@ -96,6 +98,19 @@ The dashboard will immediately start showing live detections. Real network packe
 │   └── KDDTest+.txt
 └── results/                    # Confusion matrices, charts, logs
 ```
+
+---
+
+## Jupyter Notebook
+
+For data analysis and model evaluation:
+
+```bash
+pip install notebook
+python -m notebook
+```
+
+Then open `notebooks/IDS_Analysis.ipynb` and run all cells. Covers dataset exploration, label distribution charts, feature analysis, confusion matrices, and feature importance.
 
 ---
 
