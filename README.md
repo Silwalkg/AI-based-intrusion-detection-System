@@ -173,4 +173,6 @@ Final Year Project — Computer Security
 
 ---
 
-**Author:** Silvalkg
+👩‍💻 Author:
+ Silwalkg
+ Cybersecurity Advanced Project | IT
