@@ -15,6 +15,7 @@ A real-time AI-based Network Intrusion Detection System (NIDS) that monitors liv
 3. Features are scaled and fed into a trained Random Forest model
 4. Result is pushed instantly to a live web dashboard
 5. If an attack is detected — toast notification + sound alert fires
+6. All detections saved permanently to SQLite database (`detections.db`)
 
 ---
 
@@ -114,6 +115,21 @@ Then open `notebooks/IDS_Analysis.ipynb` and run all cells. Covers dataset explo
 
 ---
 
+## API Endpoints
+
+| Endpoint | Method | Description |
+|---|---|---|
+| `/` | GET | Live dashboard |
+| `/api/stream` | GET | SSE stream of live detections |
+| `/api/stats` | GET | Current stats (total, attacks, breakdown) |
+| `/api/feed` | GET | Last 100 detections |
+| `/api/history` | GET | Last 500 detections from database |
+| `/api/history/attacks` | GET | Attack detections only from database |
+| `/api/inject` | POST | Send feature vector for classification |
+| `/api/ping` | GET | Health check |
+
+---
+
 ## Retrain Models (optional)
 
 If you want to retrain from scratch:
@@ -177,7 +193,6 @@ Python, scikit-learn, XGBoost, TensorFlow/Keras, Scapy, Flask, Chart.js, pandas,
 - Controlled attack lab — integrate CICFlowMeter for real live attack detection using the exact same feature format the model was trained on
 - SMOTE oversampling to fix class imbalance for R2L and U2R categories
 - Add more datasets (UNSW-NB15, CIC-IDS2018) for broader attack coverage
-- Store detections in a database for historical analysis
 - Email/SMS alerting for critical detections
 - Deploy on a dedicated network sensor or Raspberry Pi
 - Ensemble voting across all 4 models for higher confidence predictions
