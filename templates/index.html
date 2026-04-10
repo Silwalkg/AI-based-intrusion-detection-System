@@ -168,7 +168,13 @@
 
   <!-- Live Feed -->
   <div class="panel" style="margin-bottom:24px;">
-    <div class="panel-header">Live Detection Feed <span class="badge">100 most recent</span></div>
+    <div class="panel-header">
+      Live Detection Feed
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button id="filter-btn" onclick="toggleFilter()" style="background:#21262d;border:1px solid #30363d;color:#c9d1d9;border-radius:6px;padding:4px 12px;font-size:0.75rem;cursor:pointer;">Show Attacks Only</button>
+        <span class="badge">100 most recent</span>
+      </div>
+    </div>
     <div style="overflow-x:auto;">
       <table class="feed-table">
         <thead><tr><th>#</th><th>Time</th><th>Attack Type</th><th>Confidence</th><th>Latency</th><th>Source</th><th>Status</th></tr></thead>
@@ -347,10 +353,28 @@
   }
 
   // ── SSE connection ───────────────────────────────────────
+  let attacksOnly = false;
+  function toggleFilter() {
+    attacksOnly = !attacksOnly;
+    const btn = document.getElementById('filter-btn');
+    btn.textContent = attacksOnly ? 'Show All' : 'Show Attacks Only';
+    btn.style.background   = attacksOnly ? '#2d1a1a' : '#21262d';
+    btn.style.color        = attacksOnly ? '#f85149' : '#c9d1d9';
+    btn.style.borderColor  = attacksOnly ? '#da3633' : '#30363d';
+    document.querySelectorAll('#feed-body tr').forEach(tr => {
+      const tag = tr.querySelector('.tag');
+      if (!tag) return;
+      tr.style.display = (attacksOnly && tag.classList.contains('normal')) ? 'none' : '';
+    });
+  }
+
   const evtSource = new EventSource('/api/stream');
   evtSource.onmessage = function(e) {
     const d = JSON.parse(e.data);
     addFeedRow(d);
+    if (attacksOnly && !d.is_attack) {
+      document.querySelector('#feed-body tr').style.display = 'none';
+    }
     updateStats(d);
     updateTimeline(d.is_attack);
     if (d.is_attack) showToast(d);

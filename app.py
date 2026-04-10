@@ -1,6 +1,6 @@
 """Flask dashboard server for AI-Powered IDS
 Captures real network traffic via scapy, falls back to simulation if no admin rights."""
-import sys, os, json, time, threading, pickle
+import sys, os, json, time, threading, pickle, sqlite3
 sys.path.append('src')
 
 import numpy as np
@@ -31,6 +31,39 @@ with open('models/preprocessor.pkl', 'rb') as f:
     label_encoder = pp['label_encoder']
     feature_names = pp['feature_names']
 print("✓ Model ready")
+
+# ── SQLite database ───────────────────────────────────────────
+DB_PATH = 'detections.db'
+
+def init_db():
+    conn = sqlite3.connect(DB_PATH)
+    conn.execute('''CREATE TABLE IF NOT EXISTS detections (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        timestamp   TEXT,
+        attack_type TEXT,
+        is_attack   INTEGER,
+        confidence  REAL,
+        latency_ms  REAL,
+        source      TEXT
+    )''')
+    conn.commit()
+    conn.close()
+
+def save_detection(record):
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        conn.execute('''INSERT INTO detections
+            (timestamp, attack_type, is_attack, confidence, latency_ms, source)
+            VALUES (?, ?, ?, ?, ?, ?)''',
+            (record['timestamp'], record['attack_type'], int(record['is_attack']),
+             record['confidence'], record['latency_ms'], record['source']))
+        conn.commit()
+        conn.close()
+    except Exception:
+        pass
+
+init_db()
+print("✓ Database ready (detections.db)")
 
 # ── Flow tracker for real traffic ────────────────────────────
 flow_table = defaultdict(lambda: {
@@ -109,6 +142,8 @@ def classify_and_push(features, source='live'):
                 q.append(msg)
             except Exception:
                 pass
+
+    threading.Thread(target=save_detection, args=(record,), daemon=True).start()
 
 # ── Real packet capture (scapy) ──────────────────────────────
 def packet_callback(pkt):
@@ -285,6 +320,39 @@ def api_inject():
 def api_ping():
     """Health check — confirms IDS is reachable."""
     return jsonify({'status': 'IDS online', 'model': 'random_forest'})
+
+@app.route('/api/history')
+def api_history():
+    """Return last 500 detections from the database."""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        rows = conn.execute('''SELECT id, timestamp, attack_type, is_attack,
+                               confidence, latency_ms, source
+                               FROM detections ORDER BY id DESC LIMIT 500''').fetchall()
+        conn.close()
+        return jsonify([{
+            'id': r[0], 'timestamp': r[1], 'attack_type': r[2],
+            'is_attack': bool(r[3]), 'confidence': r[4],
+            'latency_ms': r[5], 'source': r[6]
+        } for r in rows])
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/history/attacks')
+def api_history_attacks():
+    """Return only attack detections from the database."""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        rows = conn.execute('''SELECT id, timestamp, attack_type, confidence, latency_ms, source
+                               FROM detections WHERE is_attack=1
+                               ORDER BY id DESC LIMIT 200''').fetchall()
+        conn.close()
+        return jsonify([{
+            'id': r[0], 'timestamp': r[1], 'attack_type': r[2],
+            'confidence': r[3], 'latency_ms': r[4], 'source': r[5]
+        } for r in rows])
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     print("\n🛡  IDS Dashboard running at http://127.0.0.1:5000")
