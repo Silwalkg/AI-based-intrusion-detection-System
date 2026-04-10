@@ -1,7 +1,5 @@
-"""
-Flask dashboard server for AI-Powered IDS
-Captures real network traffic via scapy, falls back to simulation if no admin rights.
-"""
+"""Flask dashboard server for AI-Powered IDS
+Captures real network traffic via scapy, falls back to simulation if no admin rights."""
 import sys, os, json, time, threading, pickle
 sys.path.append('src')
 
@@ -35,8 +33,6 @@ with open('models/preprocessor.pkl', 'rb') as f:
 print("✓ Model ready")
 
 # ── Flow tracker for real traffic ────────────────────────────
-# Groups packets into flows (src_ip:src_port -> dst_ip:dst_port)
-# and extracts the 14 COMMON_FEATURES per flow.
 flow_table = defaultdict(lambda: {
     'start': None, 'fwd_pkts': 0, 'bwd_pkts': 0,
     'fwd_bytes': 0, 'bwd_bytes': 0,
@@ -47,18 +43,17 @@ flow_table = defaultdict(lambda: {
 })
 flow_lock    = threading.Lock()
 packet_id    = 0
-FLOW_TIMEOUT = 5   # seconds — flush flow after 5s of inactivity
+FLOW_TIMEOUT = 5
 
 def extract_features(flow):
-    """Convert a flow dict into the 14 COMMON_FEATURES vector."""
     duration     = (flow['last_fwd'] or flow['start']) - flow['start']
     src_bytes    = flow['fwd_bytes']
     dst_bytes    = flow['bwd_bytes']
     count        = flow['fwd_pkts'] + flow['bwd_pkts']
     fwd_iats     = flow['fwd_iats']
     bwd_iats     = flow['bwd_iats']
-    serror_rate  = np.mean(fwd_iats)  if fwd_iats  else 0.0
-    rerror_rate  = np.mean(bwd_iats)  if bwd_iats  else 0.0
+    serror_rate  = np.mean(fwd_iats) if fwd_iats else 0.0
+    rerror_rate  = np.mean(bwd_iats) if bwd_iats else 0.0
     total        = max(count, 1)
     same_srv     = flow['fwd_pkts'] / total
     diff_srv     = flow['bwd_pkts'] / total
@@ -68,7 +63,6 @@ def extract_features(flow):
     dst_h_diff   = flow['bwd_hdr_len']
     dst_h_serr   = flow['syn'] / total
     dst_h_rerr   = flow['rst'] / total
-
     return [duration, src_bytes, dst_bytes, count,
             serror_rate, rerror_rate, same_srv, diff_srv,
             dst_h_count, dst_h_srv, dst_h_same, dst_h_diff,
@@ -122,11 +116,9 @@ def packet_callback(pkt):
         from scapy.layers.inet import IP, TCP, UDP
         if not pkt.haslayer(IP):
             return
-
-        ip   = pkt[IP]
-        now  = time.time()
-        proto = pkt.proto  # 6=TCP, 17=UDP
-
+        ip    = pkt[IP]
+        now   = time.time()
+        proto = pkt.proto
         sport = pkt[TCP].sport if pkt.haslayer(TCP) else (pkt[UDP].sport if pkt.haslayer(UDP) else 0)
         dport = pkt[TCP].dport if pkt.haslayer(TCP) else (pkt[UDP].dport if pkt.haslayer(UDP) else 0)
         key   = (ip.src, sport, ip.dst, dport, proto)
@@ -135,11 +127,8 @@ def packet_callback(pkt):
             f = flow_table[key]
             if f['start'] is None:
                 f['start'] = now
-
             pkt_len = len(pkt)
-            # Determine direction (fwd = src initiated)
             if f['fwd_pkts'] == 0 or sport == list(flow_table.keys())[0][1]:
-                # forward
                 if f['last_fwd'] is not None:
                     f['fwd_iats'].append(now - f['last_fwd'])
                 f['last_fwd']   = now
@@ -149,7 +138,6 @@ def packet_callback(pkt):
                 if pkt.haslayer(TCP):
                     f['fwd_hdr_len'] += pkt[TCP].dataofs * 4
             else:
-                # backward
                 if f['last_bwd'] is not None:
                     f['bwd_iats'].append(now - f['last_bwd'])
                 f['last_bwd']   = now
@@ -157,14 +145,10 @@ def packet_callback(pkt):
                 f['bwd_bytes'] += pkt_len
                 if pkt.haslayer(TCP):
                     f['bwd_hdr_len'] += pkt[TCP].dataofs * 4
-
-            # TCP flags
             if pkt.haslayer(TCP):
                 flags = pkt[TCP].flags
                 if flags & 0x02: f['syn'] += 1
                 if flags & 0x04: f['rst'] += 1
-
-            # Flush flow if it's been active long enough
             duration = now - f['start']
             if duration >= FLOW_TIMEOUT or f['fwd_pkts'] + f['bwd_pkts'] >= 20:
                 features = extract_features(f)
@@ -184,7 +168,6 @@ def start_capture():
         print("  → Run as Administrator for real traffic capture")
 
 # ── Simulation (always runs alongside real capture) ───────────
-# Base values derived from actual training samples the model correctly classifies
 def make_normal():
     return [10862383+np.random.randint(0,1000000), 1027+np.random.randint(0,500),
             18534+np.random.randint(0,5000), 11+np.random.randint(0,5),
@@ -280,7 +263,30 @@ def api_stream():
     return Response(generate(), mimetype='text/event-stream',
                     headers={'Cache-Control': 'no-cache', 'X-Accel-Buffering': 'no'})
 
+@app.route('/api/inject', methods=['POST'])
+def api_inject():
+    """Receives attack feature vectors from a remote machine.
+    POST JSON: {"features": [...14 numbers...], "source": "network_attacker"}
+    The IDS classifies them and pushes to the live dashboard."""
+    from flask import request
+    try:
+        data     = request.get_json(force=True)
+        features = data.get('features', [])
+        source   = data.get('source', 'remote_attacker')
+        if len(features) != 14:
+            return jsonify({'error': f'Expected 14 features, got {len(features)}'}), 400
+        threading.Thread(target=classify_and_push,
+                         args=(features, source), daemon=True).start()
+        return jsonify({'status': 'ok', 'features_received': len(features)})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/ping')
+def api_ping():
+    """Health check — confirms IDS is reachable."""
+    return jsonify({'status': 'IDS online', 'model': 'random_forest'})
+
 if __name__ == '__main__':
     print("\n🛡  IDS Dashboard running at http://127.0.0.1:5000")
     print("   Run as Administrator for real network traffic capture\n")
-    app.run(debug=False, threaded=True)
+    app.run(host='0.0.0.0', port=5000, debug=False, threaded=True)
