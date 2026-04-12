@@ -81,18 +81,18 @@
     .lat-fill{height:100%;border-radius:3px;}
 
     /* Toasts */
-    #alert-container{position:fixed;top:20px;right:20px;z-index:999;display:flex;flex-direction:column;gap:10px;max-width:340px;}
-    .toast{background:#161b22;border-radius:10px;padding:14px 16px;display:flex;align-items:flex-start;gap:12px;box-shadow:0 8px 24px rgba(0,0,0,.4);animation:slideIn .3s ease;border-left:4px solid #f85149;}
+    #alert-container{position:fixed;top:20px;right:20px;z-index:999;display:flex;flex-direction:column;gap:6px;max-width:240px;}
+    .toast{background:#161b22;border-radius:8px;padding:8px 10px;display:flex;align-items:flex-start;gap:8px;box-shadow:0 4px 12px rgba(0,0,0,.4);animation:slideIn .3s ease;border-left:3px solid #f85149;}
     .toast.probe{border-left-color:#d29922;}
     .toast.r2l  {border-left-color:#79c0ff;}
     .toast.u2r  {border-left-color:#d2a8ff;}
     @keyframes slideIn{from{transform:translateX(120%);opacity:0;}to{transform:translateX(0);opacity:1;}}
     @keyframes slideOut{from{transform:translateX(0);opacity:1;}to{transform:translateX(120%);opacity:0;}}
-    .toast-icon{font-size:1.4rem;line-height:1;}
+    .toast-icon{font-size:1rem;line-height:1;}
     .toast-body{flex:1;}
-    .toast-title{font-size:0.85rem;font-weight:600;color:#e6edf3;margin-bottom:3px;}
-    .toast-msg{font-size:0.78rem;color:#8b949e;}
-    .toast-close{background:none;border:none;color:#8b949e;cursor:pointer;font-size:1rem;line-height:1;padding:0;}
+    .toast-title{font-size:0.75rem;font-weight:600;color:#e6edf3;margin-bottom:2px;}
+    .toast-msg{font-size:0.68rem;color:#8b949e;}
+    .toast-close{background:none;border:none;color:#8b949e;cursor:pointer;font-size:0.8rem;line-height:1;padding:0;}
     .toast-close:hover{color:#e6edf3;}
   </style>
 </head>
@@ -100,7 +100,10 @@
 
 <header>
   <h1>🛡️ AI-Powered Intrusion Detection System</h1>
-  <div class="status-badge"><div class="dot"></div> Monitoring Active</div>
+  <div style="display:flex;align-items:center;gap:12px;">
+    <button id="sim-btn" onclick="toggleSim()" style="background:#1a2a1a;border:1px solid #2ea043;color:#3fb950;border-radius:20px;padding:6px 14px;font-size:0.8rem;cursor:pointer;font-weight:500;">⏸ Pause Simulation</button>
+    <div class="status-badge"><div class="dot"></div> Monitoring Active</div>
+  </div>
 </header>
 
 <div class="container">
@@ -350,6 +353,21 @@
       toast.style.animation = 'slideOut .3s ease forwards';
       setTimeout(() => toast.remove(), 300);
     }, 4000);
+  }
+
+  // ── Simulation toggle ────────────────────────────────────
+  let simRunning = true;
+  function toggleSim() {
+    fetch('/api/simulation/toggle', {method: 'POST'})
+      .then(r => r.json())
+      .then(data => {
+        simRunning = data.simulation;
+        const btn = document.getElementById('sim-btn');
+        btn.textContent = simRunning ? '⏸ Pause Simulation' : '▶ Resume Simulation';
+        btn.style.background   = simRunning ? '#1a2a1a' : '#2a1a1a';
+        btn.style.borderColor  = simRunning ? '#2ea043' : '#da3633';
+        btn.style.color        = simRunning ? '#3fb950' : '#f85149';
+      });
   }
 
   // ── SSE connection ───────────────────────────────────────

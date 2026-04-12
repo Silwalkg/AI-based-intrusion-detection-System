@@ -25,3 +25,5 @@ data/**/*.parquet
 *.parquet
 *.zip
 *.tar.gz
+*.db
+*.sqlite

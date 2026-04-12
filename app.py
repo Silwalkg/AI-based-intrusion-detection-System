@@ -245,11 +245,15 @@ weights    = [0.20, 0.35, 0.25, 0.12, 0.08]
 
 def simulation_loop():
     while True:
-        gen     = np.random.choice(generators, p=weights)
-        sample  = np.array(gen(), dtype=np.float32)
-        sample += np.random.normal(0, 0.01, size=len(sample))
-        classify_and_push(sample.tolist(), source='simulated')
+        if simulation_enabled:
+            gen     = np.random.choice(generators, p=weights)
+            sample  = np.array(gen(), dtype=np.float32)
+            sample += np.random.normal(0, 0.01, size=len(sample))
+            classify_and_push(sample.tolist(), source='simulated')
         time.sleep(0.5)
+
+# ── Simulation toggle ─────────────────────────────────────────
+simulation_enabled = True
 
 # ── Start detection threads ───────────────────────────────────
 threading.Thread(target=start_capture, daemon=True).start()
@@ -320,6 +324,12 @@ def api_inject():
 def api_ping():
     """Health check — confirms IDS is reachable."""
     return jsonify({'status': 'IDS online', 'model': 'random_forest'})
+
+@app.route('/api/simulation/toggle', methods=['POST'])
+def toggle_simulation():
+    global simulation_enabled
+    simulation_enabled = not simulation_enabled
+    return jsonify({'simulation': simulation_enabled})
 
 @app.route('/api/history')
 def api_history():
