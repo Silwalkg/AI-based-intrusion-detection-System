@@ -30,7 +30,7 @@ A real-time AI-based Network Intrusion Detection System (NIDS) that monitors liv
 
 ---
 
-## Model Result
+## Model Results
 
 | Model | Accuracy | F1-Score | Latency |
 |---|---|---|---|
