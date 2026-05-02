@@ -1,6 +1,9 @@
 """
 Model training module with multiple ML algorithms
 """
+"""
+all 4 models are trained
+"""
 import numpy as np
 import time
 from sklearn.ensemble import RandomForestClassifier

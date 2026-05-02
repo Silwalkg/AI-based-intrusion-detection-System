@@ -1,4 +1,7 @@
 """
+entry point that runs everything in order
+"""
+"""
 Main training pipeline for AI-Powered IDS
 Supports combined NSL-KDD + CIC-IDS2017 training.
 """

@@ -386,6 +386,21 @@
     });
   }
 
+  // ── Threshold + cooldown alerting ───────────────────────
+  const THRESHOLDS = { dos: 0.85, probe: 0.80, r2l: 0.75, u2r: 0.70 };
+  const COOLDOWN_MS = 5000; // 5 seconds per attack type
+  const lastAlerted = {};   // tracks last alert time per attack type
+
+  function shouldAlert(d) {
+    if (!d.is_attack) return false;
+    const threshold = THRESHOLDS[d.attack_type];
+    if (d.confidence < threshold) return false;
+    const now = Date.now();
+    if (lastAlerted[d.attack_type] && (now - lastAlerted[d.attack_type]) < COOLDOWN_MS) return false;
+    lastAlerted[d.attack_type] = now;
+    return true;
+  }
+
   const evtSource = new EventSource('/api/stream');
   evtSource.onmessage = function(e) {
     const d = JSON.parse(e.data);
@@ -395,7 +410,7 @@
     }
     updateStats(d);
     updateTimeline(d.is_attack);
-    if (d.is_attack) showToast(d);
+    if (shouldAlert(d)) showToast(d);
   };
   evtSource.onerror = function() {
     document.querySelector('.status-badge').innerHTML =
