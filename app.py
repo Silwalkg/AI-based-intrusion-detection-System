@@ -1,12 +1,23 @@
 """Flask dashboard server for AI-Powered IDS
 Captures real network traffic via scapy, falls back to simulation if no admin rights."""
-import sys, os, json, time, threading, pickle, sqlite3
+import sys, os, json, time, threading, pickle, sqlite3, logging
 sys.path.append('src')
 
 import numpy as np
 from flask import Flask, render_template, Response, jsonify
 from collections import deque, defaultdict
 from datetime import datetime
+
+# ── Configure logging ─────────────────────────────────────────
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('ids.log'),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
@@ -22,32 +33,45 @@ sse_clients = []
 lock        = threading.Lock()
 
 # ── Load model & preprocessor ────────────────────────────────
-print("Loading model...")
-with open('models/random_forest.pkl', 'rb') as f:
-    model = pickle.load(f)
-with open('models/preprocessor.pkl', 'rb') as f:
-    pp = pickle.load(f)
-    scaler        = pp['scaler']
-    label_encoder = pp['label_encoder']
-    feature_names = pp['feature_names']
-print("✓ Model ready")
+logger.info("Loading model...")
+try:
+    with open('models/random_forest.pkl', 'rb') as f:
+        model = pickle.load(f)
+    with open('models/preprocessor.pkl', 'rb') as f:
+        pp = pickle.load(f)
+        scaler        = pp['scaler']
+        label_encoder = pp['label_encoder']
+        feature_names = pp['feature_names']
+    logger.info("Model loaded successfully")
+except FileNotFoundError as e:
+    logger.error(f"Model files not found: {e}")
+    logger.error("Please ensure models/ directory contains: random_forest.pkl and preprocessor.pkl")
+    sys.exit(1)
+except Exception as e:
+    logger.error(f"Error loading model: {e}")
+    sys.exit(1)
 
 # ── SQLite database ───────────────────────────────────────────
 DB_PATH = 'detections.db'
 
 def init_db():
-    conn = sqlite3.connect(DB_PATH)
-    conn.execute('''CREATE TABLE IF NOT EXISTS detections (
-        id          INTEGER PRIMARY KEY AUTOINCREMENT,
-        timestamp   TEXT,
-        attack_type TEXT,
-        is_attack   INTEGER,
-        confidence  REAL,
-        latency_ms  REAL,
-        source      TEXT
-    )''')
-    conn.commit()
-    conn.close()
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        conn.execute('''CREATE TABLE IF NOT EXISTS detections (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            timestamp   TEXT,
+            attack_type TEXT,
+            is_attack   INTEGER,
+            confidence  REAL,
+            latency_ms  REAL,
+            source      TEXT
+        )''')
+        conn.commit()
+        conn.close()
+        logger.info("Database initialized successfully")
+    except Exception as e:
+        logger.error(f"Error initializing database: {e}")
+        raise
 
 def save_detection(record):
     try:
