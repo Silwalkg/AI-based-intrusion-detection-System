@@ -7,6 +7,7 @@ import numpy as np
 from flask import Flask, render_template, Response, jsonify
 from collections import deque, defaultdict
 from datetime import datetime
+from real_time_detection import RealTimeIDS, simulate_traffic
 
 # ── Configure logging ─────────────────────────────────────────
 logging.basicConfig(
@@ -31,18 +32,21 @@ stats = {
 }
 sse_clients = []
 lock        = threading.Lock()
+packet_id   = 0
 
 # ── Load model & preprocessor ────────────────────────────────
 logger.info("Loading model...")
 try:
-    with open('models/random_forest.pkl', 'rb') as f:
-        model = pickle.load(f)
-    with open('models/preprocessor.pkl', 'rb') as f:
-        pp = pickle.load(f)
-        scaler        = pp['scaler']
-        label_encoder = pp['label_encoder']
-        feature_names = pp['feature_names']
-    logger.info("Model loaded successfully")
+    # Use the new RealTimeIDS class with XGBoost (fastest)
+    ids = RealTimeIDS(
+        model_path='models/xgboost.pkl',
+        preprocessor_path='models/preprocessor.pkl'
+    )
+    model = ids.model
+    scaler = ids.scaler
+    label_encoder = ids.label_encoder
+    feature_names = ids.feature_names
+    logger.info("Model loaded successfully via RealTimeIDS (XGBoost - fastest)")
 except FileNotFoundError as e:
     logger.error(f"Model files not found: {e}")
     logger.error("Please ensure models/ directory contains: random_forest.pkl and preprocessor.pkl")
@@ -268,13 +272,56 @@ generators = [make_normal, make_dos, make_probe, make_r2l, make_u2r]
 weights    = [0.20, 0.35, 0.25, 0.12, 0.08]
 
 def simulation_loop():
+    # Generate initial batch of simulated traffic
+    traffic_samples = simulate_traffic(num_samples=1000)
+    sample_index = 0
+    batch_size = 10  # Process 10 samples at once
+    
     while True:
         if simulation_enabled:
-            gen     = np.random.choice(generators, p=weights)
-            sample  = np.array(gen(), dtype=np.float32)
-            sample += np.random.normal(0, 0.01, size=len(sample))
-            classify_and_push(sample.tolist(), source='simulated')
-        time.sleep(0.5)
+            # Collect batch
+            batch = []
+            for _ in range(batch_size):
+                sample = traffic_samples[sample_index % len(traffic_samples)]
+                batch.append(sample)
+                sample_index += 1
+            
+            # Batch detection (faster than individual)
+            results = ids.detect_batch(batch)
+            
+            # Push results to dashboard
+            for i, result in enumerate(results):
+                record = {
+                    'id':          sample_index - batch_size + i,
+                    'timestamp':   result.get('timestamp', datetime.now().isoformat()).split('T')[1][:12],
+                    'attack_type': result['attack_type'],
+                    'is_attack':   result['is_attack'],
+                    'confidence':  round(result['confidence'], 3),
+                    'latency_ms':  round(result['latency_ms'], 4),
+                    'source':      'simulated',
+                }
+                
+                # Push to dashboard
+                with lock:
+                    detections.appendleft(record)
+                    stats['total'] += 1
+                    if result['is_attack']:
+                        stats['attacks'] += 1
+                    stats['breakdown'][result['attack_type']] = stats['breakdown'].get(result['attack_type'], 0) + 1
+                    stats['latencies'].append(result['latency_ms'])
+                    
+                    # Push to SSE clients
+                    msg = f"data: {json.dumps(record)}\n\n"
+                    for q in list(sse_clients):
+                        try:
+                            q.append(msg)
+                        except Exception:
+                            pass
+                
+                # Save to database
+                threading.Thread(target=save_detection, args=(record,), daemon=True).start()
+        
+        time.sleep(0.001)  # Minimal delay
 
 # ── Simulation toggle ─────────────────────────────────────────
 simulation_enabled = True

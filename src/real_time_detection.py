@@ -1,15 +1,224 @@
 """
-Real-time intrusion detection system
+Real-time intrusion detection system with live traffic integration
 """
 import numpy as np
 import time
 import pickle
-from collections import deque
+from collections import deque, defaultdict
 from datetime import datetime
+import threading
+import logging
+from scapy.all import sniff, IP, TCP, UDP
+from scapy.layers.inet import ICMP
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+
+class NetworkFlow:
+    """Represents a network flow (conversation between two hosts)"""
+    def __init__(self, src_ip, dst_ip, src_port, dst_port, protocol):
+        self.src_ip = src_ip
+        self.dst_ip = dst_ip
+        self.src_port = src_port
+        self.dst_port = dst_port
+        self.protocol = protocol
+        
+        # Flow statistics
+        self.src_bytes = 0
+        self.dst_bytes = 0
+        self.packet_count = 0
+        self.start_time = time.time()
+        self.last_update = time.time()
+        self.packets = []
+        
+        # Error tracking
+        self.src_errors = 0
+        self.dst_errors = 0
+        
+    def add_packet(self, packet_size, direction='src_to_dst', has_error=False):
+        """Add packet to flow"""
+        if direction == 'src_to_dst':
+            self.src_bytes += packet_size
+            if has_error:
+                self.src_errors += 1
+        else:
+            self.dst_bytes += packet_size
+            if has_error:
+                self.dst_errors += 1
+        
+        self.packet_count += 1
+        self.last_update = time.time()
+        self.packets.append({
+            'size': packet_size,
+            'direction': direction,
+            'timestamp': time.time()
+        })
+    
+    def get_duration(self):
+        """Get flow duration in seconds"""
+        return self.last_update - self.start_time
+    
+    def get_features(self):
+        """Extract features from flow for ML model"""
+        duration = self.get_duration()
+        
+        # Calculate rates
+        total_packets = self.packet_count
+        src_error_rate = self.src_errors / max(total_packets, 1)
+        dst_error_rate = self.dst_errors / max(total_packets, 1)
+        
+        # Service consistency (simplified)
+        same_srv_rate = 0.9 if self.protocol in ['tcp', 'udp'] else 0.5
+        diff_srv_rate = 0.1 if self.protocol in ['tcp', 'udp'] else 0.5
+        
+        # Host statistics (simplified - would need more context in real system)
+        dst_host_count = 1
+        dst_host_srv_count = 1
+        dst_host_same_srv_rate = 0.9
+        dst_host_diff_srv_rate = 0.1
+        dst_host_serror_rate = dst_error_rate
+        dst_host_rerror_rate = src_error_rate
+        
+        # Return 14 features matching training data
+        features = [
+            duration,
+            self.src_bytes,
+            self.dst_bytes,
+            total_packets,
+            src_error_rate,
+            dst_error_rate,
+            same_srv_rate,
+            diff_srv_rate,
+            dst_host_count,
+            dst_host_srv_count,
+            dst_host_same_srv_rate,
+            dst_host_diff_srv_rate,
+            dst_host_serror_rate,
+            dst_host_rerror_rate
+        ]
+        
+        return features
+
+
+class PacketCapture:
+    """Captures and processes network packets in real-time"""
+    def __init__(self, interface=None):
+        self.interface = interface
+        self.flows = {}  # Dictionary to store active flows
+        self.flow_timeout = 30  # seconds
+        self.running = False
+        self.packet_queue = deque(maxlen=1000)
+        self.lock = threading.Lock()
+        
+        logger.info(f"PacketCapture initialized on interface: {interface}")
+    
+    def create_flow_key(self, src_ip, dst_ip, src_port, dst_port, protocol):
+        """Create unique key for flow"""
+        # Bidirectional flow key (same flow in both directions)
+        ips = tuple(sorted([src_ip, dst_ip]))
+        ports = tuple(sorted([src_port, dst_port]))
+        return (ips[0], ips[1], ports[0], ports[1], protocol)
+    
+    def packet_callback(self, packet):
+        """Callback function for each captured packet"""
+        try:
+            if not packet.haslayer(IP):
+                return
+            
+            ip_layer = packet[IP]
+            src_ip = ip_layer.src
+            dst_ip = ip_layer.dst
+            protocol = 'unknown'
+            src_port = 0
+            dst_port = 0
+            packet_size = len(packet)
+            
+            # Extract transport layer info
+            if packet.haslayer(TCP):
+                protocol = 'tcp'
+                tcp_layer = packet[TCP]
+                src_port = tcp_layer.sport
+                dst_port = tcp_layer.dport
+            elif packet.haslayer(UDP):
+                protocol = 'udp'
+                udp_layer = packet[UDP]
+                src_port = udp_layer.sport
+                dst_port = udp_layer.dport
+            elif packet.haslayer(ICMP):
+                protocol = 'icmp'
+            
+            # Create or update flow
+            flow_key = self.create_flow_key(src_ip, dst_ip, src_port, dst_port, protocol)
+            
+            with self.lock:
+                if flow_key not in self.flows:
+                    self.flows[flow_key] = NetworkFlow(src_ip, dst_ip, src_port, dst_port, protocol)
+                
+                # Determine direction
+                direction = 'src_to_dst' if src_ip < dst_ip else 'dst_to_src'
+                self.flows[flow_key].add_packet(packet_size, direction)
+                
+                # Store packet info
+                self.packet_queue.append({
+                    'timestamp': datetime.now().isoformat(),
+                    'src_ip': src_ip,
+                    'dst_ip': dst_ip,
+                    'src_port': src_port,
+                    'dst_port': dst_port,
+                    'protocol': protocol,
+                    'size': packet_size
+                })
+        
+        except Exception as e:
+            logger.error(f"Error processing packet: {e}")
+    
+    def cleanup_flows(self):
+        """Remove inactive flows"""
+        current_time = time.time()
+        with self.lock:
+            expired_flows = [
+                key for key, flow in self.flows.items()
+                if current_time - flow.last_update > self.flow_timeout
+            ]
+            for key in expired_flows:
+                del self.flows[key]
+    
+    def get_active_flows(self):
+        """Get list of active flows"""
+        with self.lock:
+            return list(self.flows.values())
+    
+    def start_capture(self):
+        """Start packet capture in background thread"""
+        self.running = True
+        
+        def capture_thread():
+            logger.info(f"Starting packet capture on {self.interface}")
+            try:
+                sniff(
+                    iface=self.interface,
+                    prn=self.packet_callback,
+                    store=False,
+                    stop_filter=lambda x: not self.running
+                )
+            except Exception as e:
+                logger.error(f"Packet capture error: {e}")
+        
+        thread = threading.Thread(target=capture_thread, daemon=True)
+        thread.start()
+        logger.info("Packet capture thread started")
+    
+    def stop_capture(self):
+        """Stop packet capture"""
+        self.running = False
+        logger.info("Packet capture stopped")
+
 
 class RealTimeIDS:
-    def __init__(self, model_path, preprocessor_path):
-        """Initialize real-time IDS"""
+    def __init__(self, model_path, preprocessor_path, interface=None):
+        """Initialize real-time IDS with optional live traffic capture"""
         print("Initializing Real-Time IDS...")
         
         # Load model
@@ -29,6 +238,15 @@ class RealTimeIDS:
         self.detection_count = {label: 0 for label in self.label_encoder.classes_}
         self.total_detections = 0
         self.latency_history = deque(maxlen=1000)
+        
+        # Live traffic integration
+        self.packet_capture = None
+        self.interface = interface
+        self.live_mode = False
+        
+        if interface:
+            self.packet_capture = PacketCapture(interface=interface)
+            print(f"✓ Packet capture configured for interface: {interface}")
         
         print("✓ Real-Time IDS initialized successfully")
     
@@ -85,6 +303,52 @@ class RealTimeIDS:
         }
         
         return result
+    
+    def detect_from_flow(self, flow):
+        """Detect intrusion from a network flow"""
+        features = flow.get_features()
+        return self.detect(features)
+    
+    def start_live_detection(self):
+        """Start live traffic detection"""
+        if not self.packet_capture:
+            print("⚠ No interface configured for live detection")
+            return
+        
+        self.live_mode = True
+        self.packet_capture.start_capture()
+        print(f"🔍 Live detection started on {self.interface}")
+        
+        # Detection loop
+        try:
+            while self.live_mode:
+                # Cleanup old flows
+                self.packet_capture.cleanup_flows()
+                
+                # Get active flows
+                flows = self.packet_capture.get_active_flows()
+                
+                # Detect on flows with enough data
+                for flow in flows:
+                    if flow.packet_count >= 5:  # Minimum packets for detection
+                        result = self.detect_from_flow(flow)
+                        
+                        if result['is_attack']:
+                            print(f"⚠ ATTACK: {result['attack_type']} from {flow.src_ip}:{flow.src_port} "
+                                  f"to {flow.dst_ip}:{flow.dst_port} "
+                                  f"(confidence: {result['confidence']:.2f})")
+                
+                time.sleep(1)  # Check every second
+        
+        except KeyboardInterrupt:
+            self.stop_live_detection()
+    
+    def stop_live_detection(self):
+        """Stop live traffic detection"""
+        self.live_mode = False
+        if self.packet_capture:
+            self.packet_capture.stop_capture()
+        print("🛑 Live detection stopped")
     
     def detect_batch(self, traffic_batch):
         """Detect intrusions in batch"""
@@ -173,6 +437,7 @@ class RealTimeIDS:
         else:
             print("\n⚠ Latency exceeds 50ms threshold")
 
+
 def simulate_traffic(num_samples=100, num_features=14):
     """
     Simulate network traffic with realistic patterns per attack type.
@@ -238,13 +503,14 @@ def simulate_traffic(num_samples=100, num_features=14):
 
     return traffic_samples
 
+
 if __name__ == "__main__":
     print("="*60)
     print("Real-Time Intrusion Detection System")
     print("="*60)
     
     try:
-        # Initialize IDS
+        # Initialize IDS (without interface for demo)
         ids = RealTimeIDS(
             model_path='models/random_forest.pkl',
             preprocessor_path='models/preprocessor.pkl'
