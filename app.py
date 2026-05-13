@@ -37,9 +37,13 @@ packet_id   = 0
 # ── Load model & preprocessor ────────────────────────────────
 logger.info("Loading model...")
 try:
-    # Use the new RealTimeIDS class with XGBoost (fastest)
+    # Use the new RealTimeIDS class - choose model:
+    # - 'models/xgboost.pkl' (fastest, 0.00365 ms) ← RECOMMENDED
+    # - 'models/random_forest.pkl' (98.80% accuracy, 0.00513 ms)
+    # - 'models/svm.pkl' (slower, 0.267 ms)
+    # - 'models/neural_network.h5' (0.0282 ms)
     ids = RealTimeIDS(
-        model_path='models/xgboost.pkl',
+        model_path='models/xgboost.pkl',  # ← XGBoost (fastest & best)
         preprocessor_path='models/preprocessor.pkl'
     )
     model = ids.model
