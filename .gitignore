@@ -27,3 +27,6 @@ data/**/*.parquet
 *.tar.gz
 *.db
 *.sqlite
+HOW_TO_TEST.txt
+LIVE_TRAFFIC_INTEGRATION.md
+PROJECT_SUMMARY.md
