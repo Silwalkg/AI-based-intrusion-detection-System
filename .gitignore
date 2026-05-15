@@ -25,7 +25,8 @@ data/**/*.parquet
 *.parquet
 *.zip
 *.tar.gz
-*.db
+detections.db
+detections.db-journal
 *.sqlite
 HOW_TO_TEST.txt
 LIVE_TRAFFIC_INTEGRATION.md
