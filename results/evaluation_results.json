@@ -1,29 +1,29 @@
 {
     "Random Forest": {
-        "accuracy": 0.9934352275787772,
-        "precision": 0.9931242534543852,
-        "recall": 0.9934352275787772,
-        "f1_score": 0.9931781842907406,
-        "avg_latency_ms": 0.007679937279452348,
-        "total_prediction_time": 0.22812485694885254,
-        "samples_evaluated": 29704
+        "accuracy": 0.9879762582760874,
+        "precision": 0.9881642460509971,
+        "recall": 0.9879762582760874,
+        "f1_score": 0.9878122552967206,
+        "avg_latency_ms": 0.0049714775240731575,
+        "total_prediction_time": 2.9592173099517822,
+        "samples_evaluated": 595239
     },
     "XGBoost": {
-        "accuracy": 0.9943105305682737,
-        "precision": 0.9941580656637153,
-        "recall": 0.9943105305682737,
-        "f1_score": 0.9941802584102694,
-        "avg_latency_ms": 0.003707945073931936,
-        "total_prediction_time": 0.11014080047607422,
-        "samples_evaluated": 29704
+        "accuracy": 0.9880333781892652,
+        "precision": 0.9882136273509188,
+        "recall": 0.9880333781892652,
+        "f1_score": 0.9878885760395087,
+        "avg_latency_ms": 0.0038699372977795353,
+        "total_prediction_time": 2.303537607192993,
+        "samples_evaluated": 595239
     },
     "SVM": {
-        "accuracy": 0.9124697010503636,
-        "precision": 0.891315769032191,
-        "recall": 0.9124697010503636,
-        "f1_score": 0.900849887244484,
-        "avg_latency_ms": 0.16517982532995396,
-        "total_prediction_time": 4.906501531600952,
-        "samples_evaluated": 29704
+        "accuracy": 0.8597554931716503,
+        "precision": 0.8487468309187864,
+        "recall": 0.8597554931716503,
+        "f1_score": 0.8231024249965786,
+        "avg_latency_ms": 0.2386020908999561,
+        "total_prediction_time": 142.02526998519897,
+        "samples_evaluated": 595239
     }
 }
