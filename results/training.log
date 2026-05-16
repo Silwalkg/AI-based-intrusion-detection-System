@@ -61,3 +61,11 @@
 [2026-03-14 15:29:53] Evaluating SVM
 [2026-03-14 15:32:33] Evaluating Neural Network
 [2026-03-14 15:32:51] Training pipeline completed successfully
+[2026-05-16 13:36:44] Starting IDS training pipeline
+[2026-05-16 13:36:50] Training Random Forest
+[2026-05-16 13:36:55] Training XGBoost
+[2026-05-16 13:37:02] Training SVM
+[2026-05-16 13:37:03] Evaluating Random Forest
+[2026-05-16 13:37:03] Evaluating XGBoost
+[2026-05-16 13:37:04] Evaluating SVM
+[2026-05-16 13:37:10] Training pipeline completed successfully

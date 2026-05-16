@@ -98,10 +98,8 @@ def main():
     svm_model = trainer.train_svm(X_train, y_train, sample_size=10000)
     trainer.save_model('svm')
 
-    log_message("Training Neural Network")
-    num_classes = len(np.unique(y_train))
-    nn_model, _ = trainer.train_neural_network(X_train, y_train, X_val, y_val, num_classes)
-    trainer.save_model('neural_network')
+    # Note: Neural Network training skipped (TensorFlow not available on Python 3.14)
+    # Using only Random Forest, XGBoost, and SVM models
 
     # ------------------------------------------------------------------ #
     # STEP 4: Evaluation                                                   #
@@ -113,7 +111,7 @@ def main():
     evaluator = ModelEvaluator(label_encoder=preprocessor.label_encoder)
 
     for name, model in [('Random Forest', rf_model), ('XGBoost', xgb_model),
-                        ('SVM', svm_model), ('Neural Network', nn_model)]:
+                        ('SVM', svm_model)]:
         log_message(f"Evaluating {name}")
         evaluator.evaluate_model(model, X_test, y_test, name)
 

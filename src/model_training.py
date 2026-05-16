@@ -2,7 +2,7 @@
 Model training module with multiple ML algorithms
 """
 """
-all 4 models are trained
+3 models are trained (TensorFlow not available on Python 3.14)
 """
 import numpy as np
 import time
@@ -10,8 +10,6 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import SVC
 from sklearn.model_selection import GridSearchCV, cross_val_score
 from xgboost import XGBClassifier
-from tensorflow import keras
-from tensorflow.keras import layers
 from sklearn.metrics import classification_report, confusion_matrix
 import pickle
 import os

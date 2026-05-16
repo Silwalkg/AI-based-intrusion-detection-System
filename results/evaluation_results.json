@@ -1,38 +1,29 @@
 {
     "Random Forest": {
-        "accuracy": 0.9879762582760874,
-        "precision": 0.9881642460509971,
-        "recall": 0.9879762582760874,
-        "f1_score": 0.9878122552967206,
-        "avg_latency_ms": 0.005128790231277423,
-        "total_prediction_time": 3.052855968475342,
-        "samples_evaluated": 595239
+        "accuracy": 0.9934352275787772,
+        "precision": 0.9931242534543852,
+        "recall": 0.9934352275787772,
+        "f1_score": 0.9931781842907406,
+        "avg_latency_ms": 0.007679937279452348,
+        "total_prediction_time": 0.22812485694885254,
+        "samples_evaluated": 29704
     },
     "XGBoost": {
-        "accuracy": 0.9880333781892652,
-        "precision": 0.9882136273509188,
-        "recall": 0.9880333781892652,
-        "f1_score": 0.9878885760395087,
-        "avg_latency_ms": 0.0036471583051963293,
-        "total_prediction_time": 2.170930862426758,
-        "samples_evaluated": 595239
+        "accuracy": 0.9943105305682737,
+        "precision": 0.9941580656637153,
+        "recall": 0.9943105305682737,
+        "f1_score": 0.9941802584102694,
+        "avg_latency_ms": 0.003707945073931936,
+        "total_prediction_time": 0.11014080047607422,
+        "samples_evaluated": 29704
     },
     "SVM": {
-        "accuracy": 0.8595538934780819,
-        "precision": 0.8525112053110346,
-        "recall": 0.8595538934780819,
-        "f1_score": 0.8221914680941561,
-        "avg_latency_ms": 0.2669731519972873,
-        "total_prediction_time": 158.91283202171326,
-        "samples_evaluated": 595239
-    },
-    "Neural Network": {
-        "accuracy": 0.9587745426626951,
-        "precision": 0.9592686526940878,
-        "recall": 0.9587745426626951,
-        "f1_score": 0.9579207980823735,
-        "avg_latency_ms": 0.028170801010491107,
-        "total_prediction_time": 16.768359422683716,
-        "samples_evaluated": 595239
+        "accuracy": 0.9124697010503636,
+        "precision": 0.891315769032191,
+        "recall": 0.9124697010503636,
+        "f1_score": 0.900849887244484,
+        "avg_latency_ms": 0.16517982532995396,
+        "total_prediction_time": 4.906501531600952,
+        "samples_evaluated": 29704
     }
 }
